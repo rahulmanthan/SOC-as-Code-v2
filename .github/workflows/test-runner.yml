@@ -1,0 +1,20 @@
+name: Test Self-Hosted Runner
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  hello:
+    runs-on: self-hosted
+    steps:
+      - name: Confirm runner identity
+        run: |
+          echo "Running on: $env:COMPUTERNAME"
+          echo "Current directory: $PWD"
+          echo "Date: $(Get-Date)"
+      - name: Checkout repo
+        uses: actions/checkout@v4
+      - name: List repo contents
+        run: dir
