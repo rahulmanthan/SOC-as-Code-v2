@@ -1,0 +1,12 @@
+# CODEOWNERS - SOC-as-Code v2
+#
+# Any change touching rules/production/ requires a review from the owner(s)
+# listed below before it can be merged, once branch protection is enabled
+# on the default branch (Settings -> Branches -> Add rule -> Require review
+# from Code Owners).
+#
+# This is the mechanism behind "rules that fail validation, or rules being
+# promoted from staging, get reviewed before they go live" -- GitHub enforces
+# it structurally rather than relying on convention.
+
+/rules/production/  @rahulmanthan
