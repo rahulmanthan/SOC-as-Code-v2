@@ -1,0 +1,17 @@
+# SOC-as-Code-v2 — Python Dependencies
+# Used by both local development and the GitHub Actions workflow.
+
+# Sigma rule compilation (Sigma → SPL)
+sigma-cli>=1.0
+pysigma-backend-splunk>=1.5
+pysigma-pipeline-windows>=1.2
+
+# Lab VM remote execution (WinRM)
+pywinrm>=0.4
+
+# Splunk REST API + YAML parsing
+requests>=2.31
+pyyaml>=6.0
+
+# Local development convenience (.env file loading)
+python-dotenv>=1.0

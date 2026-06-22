@@ -23,31 +23,36 @@ Every rule is evaluated against three corpora, not one:
 | **Benign baseline** | Normal background activity — does the rule avoid drowning analysts in nuisance alerts? |
 
 A rule only earns production status when it performs acceptably on all three.
-Right now this validation is done by hand (see `docs/validation-log.md` for
-the record); a GitHub Actions pipeline with a self-hosted runner will
-eventually automate the full loop — execute the atomic test, collect the
-telemetry, compile and run the rule, score it, and route the result — so
-that pushing a rule is the only manual step required.
+This validation is automated via a GitHub Actions pipeline
+(`.github/workflows/validate-rule.yml`) running on a self-hosted runner with
+network access into the private lab. Pushing a rule to `rules/staging/` is
+the only manual step — compilation, attack execution, Splunk querying,
+three-corpus scoring, and report posting happen automatically.
 
 ## Repo layout
 
 ```
 rules/
-├── staging/      rules under test, not yet trusted
-└── production/   validated rules, organized by ATT&CK tactic
+├── staging/         rules under test, not yet trusted
+└── production/      validated rules, organized by ATT&CK tactic
     ├── execution/
     └── persistence/
-reports/          automated validation reports land here (Phase 5+)
-docs/             validation log, design notes
+scripts/
+└── validate_rule.py orchestration script (compile → attack → score → report)
+reports/             automated validation reports (JSON + Markdown)
+.github/
+├── workflows/
+│   └── validate-rule.yml   CI/CD workflow — the "one click" pipeline
+└── CODEOWNERS              enforces review for rules/production/ changes
+docs/                validation log, design notes
 ```
 
 ## Promotion gate
 
 Changes to `rules/production/` require review (see `.github/CODEOWNERS`),
-enforced via branch protection once this repo is connected to GitHub. Rules
-that fail automated validation are routed back to `rules/staging/` with an
-auto-filed issue documenting the failure, rather than silently dropped or
-silently merged.
+enforced via branch protection. Rules that fail automated validation are
+routed for review with an auto-filed issue documenting the failure, rather
+than silently dropped or silently merged.
 
 ## Current rule set
 
@@ -58,7 +63,7 @@ silently merged.
 
 ## Lab environment
 
-- Windows Server 2025 (VMware, host-only network)
+- Windows Server 2025 (VirtualBox, host-only network)
 - Sysmon (SwiftOnSecurity baseline config)
 - Splunk Enterprise (Universal Forwarder on the lab VM)
 - Invoke-AtomicRedTeam / Atomic Red Team atomics library
@@ -70,7 +75,10 @@ silently merged.
 - [x] First Sigma rule manually validated against real attack telemetry
 - [x] Second Sigma rule manually validated against real attack telemetry
 - [x] Repository structure and promotion gate scaffolding
-- [ ] Self-hosted GitHub Actions runner
-- [ ] Automated orchestration (compile → trigger atomic test → score → report)
-- [ ] Full one-click validation loop
-- [ ] Expansion to additional domains (authentication, network, cloud)
+- [x] Self-hosted GitHub Actions runner
+- [x] Automated orchestration (compile → trigger atomic test → score → report)
+- [x] Full one-click validation loop (CI workflow wired)
+- [ ] Production promotion gate (auto-promote passing rules + deploy Splunk saved searches)
+- [ ] Auto-file GitHub Issues for failing rules
+- [ ] Expansion to additional domains (credential access, defense evasion, C2)
+

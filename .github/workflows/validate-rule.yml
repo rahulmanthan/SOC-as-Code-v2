@@ -1,0 +1,210 @@
+# ──────────────────────────────────────────────────────────────
+#  SOC-as-Code-v2 — Detection Rule Validation Pipeline
+# ──────────────────────────────────────────────────────────────
+#  Trigger:  Any PR or push that touches rules/staging/**
+#  Runner:   Self-hosted (your machine — needs network access
+#            to both the lab VM and Splunk; GitHub-hosted
+#            runners can't reach a private lab)
+#  Flow:
+#    1. Detect which staging rules changed
+#    2. For each rule:
+#       a. Compile Sigma → SPL
+#       b. Execute the matching Atomic Red Team test on the lab VM
+#       c. Query Splunk across three corpora (target / cross-domain / benign)
+#       d. Score and write a report
+#    3. Post the combined report as a PR comment
+#    4. Gate the merge: green check if all rules pass, red X if any fail
+# ──────────────────────────────────────────────────────────────
+
+name: Validate Staging Rules
+
+on:
+  pull_request:
+    paths:
+      - 'rules/staging/**'
+  push:
+    branches: [main]
+    paths:
+      - 'rules/staging/**'
+  workflow_dispatch:
+    inputs:
+      rule_path:
+        description: >
+          Path to a specific staging rule to validate
+          (e.g. rules/staging/execution/my_rule.yml).
+          Leave empty to validate all changed rules.
+        required: false
+        type: string
+
+jobs:
+  validate:
+    name: Validate Detection Rules
+    runs-on: self-hosted
+
+    # pull-requests:write  → post PR comments
+    # issues:write         → file review issues on failure (Phase 7)
+    # contents:read        → checkout; Phase 7 will need 'write' for auto-promotion
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+
+    steps:
+      # ── 1. Checkout ──────────────────────────────────────────
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # full history so git diff works on PRs
+
+      # ── 2. Install Python dependencies ───────────────────────
+      - name: Install Python dependencies
+        shell: pwsh
+        run: python -m pip install --quiet --upgrade -r requirements.txt
+
+      # ── 3. Detect which staging rules changed ────────────────
+      - name: Detect changed staging rules
+        id: detect
+        shell: pwsh
+        run: |
+          $rules = @()
+
+          # --- Manual dispatch: validate a specific rule -------
+          $manual = "${{ github.event.inputs.rule_path }}"
+          if ($manual) {
+              if (Test-Path $manual) {
+                  $rules = @($manual)
+                  Write-Host "Manual dispatch — validating: $manual"
+              } else {
+                  Write-Host "::error::Rule not found: $manual"
+                  exit 2
+              }
+          }
+          # --- Pull request: diff against base branch ----------
+          elseif ("${{ github.event_name }}" -eq "pull_request") {
+              $base = "origin/${{ github.base_ref }}"
+              Write-Host "PR detected — diffing against $base"
+              $rules = @(git diff --name-only --diff-filter=ACMR $base -- "rules/staging/" |
+                         Where-Object { $_ -match '\.ya?ml$' })
+          }
+          # --- Push: diff against previous commit --------------
+          else {
+              Write-Host "Push detected — diffing against HEAD~1"
+              $rules = @(git diff --name-only --diff-filter=ACMR HEAD~1 -- "rules/staging/" |
+                         Where-Object { $_ -match '\.ya?ml$' })
+          }
+
+          # Filter out empty strings
+          $rules = $rules | Where-Object { $_ -and $_.Trim() }
+
+          if ($rules.Count -eq 0) {
+              Write-Host "No staging rules to validate — skipping."
+              "skip=true" | Out-File -Append -FilePath $env:GITHUB_OUTPUT -Encoding utf8
+              exit 0
+          }
+
+          $ruleList = ($rules -join ",")
+          "rules=$ruleList" | Out-File -Append -FilePath $env:GITHUB_OUTPUT -Encoding utf8
+          "count=$($rules.Count)" | Out-File -Append -FilePath $env:GITHUB_OUTPUT -Encoding utf8
+          Write-Host "Found $($rules.Count) staging rule(s) to validate:"
+          foreach ($r in $rules) { Write-Host "  - $r" }
+
+      # ── 4. Run validation for each changed rule ──────────────
+      - name: Validate each rule
+        if: steps.detect.outputs.skip != 'true'
+        id: validate
+        shell: pwsh
+        env:
+          SPLUNK_HOST:     ${{ secrets.SPLUNK_HOST }}
+          SPLUNK_PORT:     ${{ secrets.SPLUNK_PORT }}
+          SPLUNK_USER:     ${{ secrets.SPLUNK_USER }}
+          SPLUNK_PASSWORD: ${{ secrets.SPLUNK_PASSWORD }}
+          VM_HOST:         ${{ secrets.VM_HOST }}
+          VM_USER:         ${{ secrets.VM_USER }}
+          VM_PASSWORD:     ${{ secrets.VM_PASSWORD }}
+          ATOMICS_PATH:    ${{ secrets.ATOMICS_PATH }}
+          ATOMIC_MODULE:   ${{ secrets.ATOMIC_MODULE }}
+        run: |
+          $rules     = "${{ steps.detect.outputs.rules }}" -split ","
+          $allPassed = $true
+          $reportMDs = [System.Collections.ArrayList]@()
+          $summary   = [System.Collections.ArrayList]@()
+
+          foreach ($rule in $rules) {
+              $rule = $rule.Trim()
+              if (-not $rule) { continue }
+
+              $slug  = (Split-Path $rule -Leaf) -replace '\.ya?ml$', ''
+              $mdOut = "reports/ci_$slug.md"
+
+              Write-Host "::group::Validating $rule"
+              python scripts/validate_rule.py --rule "$rule" --output-md-path "$mdOut"
+              $rc = $LASTEXITCODE
+              Write-Host "::endgroup::"
+
+              switch ($rc) {
+                  0 { [void]$summary.Add("| ``$slug`` | T1 PASS |") }
+                  1 { [void]$summary.Add("| ``$slug`` | FAIL |"); $allPassed = $false }
+                  default { [void]$summary.Add("| ``$slug`` | ERROR (exit $rc) |"); $allPassed = $false }
+              }
+
+              if (Test-Path $mdOut) { [void]$reportMDs.Add($mdOut) }
+          }
+
+          # ── Build the combined PR comment ──
+          $lines = [System.Collections.ArrayList]@()
+          [void]$lines.Add("# SOC-as-Code-v2 Pipeline Results")
+          [void]$lines.Add("")
+          [void]$lines.Add("| Rule | Verdict |")
+          [void]$lines.Add("|---|---|")
+          foreach ($s in $summary) { [void]$lines.Add($s) }
+          [void]$lines.Add("")
+          [void]$lines.Add("---")
+          [void]$lines.Add("")
+
+          foreach ($md in $reportMDs) {
+              $content = Get-Content $md -Raw -Encoding utf8
+              [void]$lines.Add($content)
+              [void]$lines.Add("")
+              [void]$lines.Add("---")
+              [void]$lines.Add("")
+          }
+
+          $commentPath = "reports/ci_pr_comment.md"
+          $lines -join "`n" | Out-File -FilePath $commentPath -Encoding utf8 -NoNewline
+          "report_path=$commentPath" | Out-File -Append -FilePath $env:GITHUB_OUTPUT -Encoding utf8
+
+          if ($allPassed) {
+              "verdict=PASS" | Out-File -Append -FilePath $env:GITHUB_OUTPUT -Encoding utf8
+              Write-Host "All rules passed validation."
+          } else {
+              "verdict=FAIL" | Out-File -Append -FilePath $env:GITHUB_OUTPUT -Encoding utf8
+              Write-Host "::warning::One or more rules failed validation."
+          }
+
+      # ── 5. Post the report as a PR comment ───────────────────
+      - name: Post validation report as PR comment
+        if: github.event_name == 'pull_request' && steps.detect.outputs.skip != 'true'
+        uses: peter-evans/create-or-update-comment@v4
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          body-path: ${{ steps.validate.outputs.report_path }}
+
+      # ── 6. Upload full reports as workflow artifacts ──────────
+      - name: Upload reports
+        if: always() && steps.detect.outputs.skip != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: validation-reports-${{ github.run_id }}
+          path: reports/
+          retention-days: 30
+
+      # ── 7. Gate the merge ────────────────────────────────────
+      - name: Gate — fail job if any rule failed validation
+        if: steps.detect.outputs.skip != 'true'
+        shell: pwsh
+        run: |
+          if ("${{ steps.validate.outputs.verdict }}" -eq "FAIL") {
+              Write-Host "::error::One or more detection rules failed validation. See the PR comment for the full report."
+              exit 1
+          }
+          Write-Host "All rules passed — PR is clear to merge."
