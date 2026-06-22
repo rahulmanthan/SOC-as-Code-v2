@@ -16,3 +16,11 @@ venv/
 .env
 *.env
 splunk_credentials*
+
+# Generated validation reports
+reports/*.json
+reports/*.md
+
+# GitHub Actions artifacts / temp files
+reports/ci_*.md
+reports/ci_*.json
