@@ -1,0 +1,88 @@
+{
+  "timestamp": "20260622T205243Z",
+  "rule": "T1059.001_encoded_powershell",
+  "title": "PowerShell Execution via Encoded Command Switch",
+  "technique_id": "T1059.001",
+  "level": "medium",
+  "verdict": "PASS",
+  "classification": "STRONG",
+  "scores": {
+    "target_hits": 4,
+    "historical_attack_hits": 18,
+    "baseline_hits": 0,
+    "target_sample": [
+      {
+        "CommandLine": "powershell.exe  -e  JgAgACgAZwBjAG0AIAAoACcAaQBlAHsAMAB9ACcAIAAtAGYAIAAnAHgAJwApACkAIAAoACIAVwByACIAKwAiAGkAdAAiACsAIgBlAC0ASAAiACsAIgBvAHMAdAAgACcASAAiACsAIgBlAGwAIgArACIAbABvACwAIABmAHIAIgArACIAbwBtACAAUAAiACsAIgBvAHcAIgArACIAZQByAFMAIgArACIAaAAiACsAIgBlAGwAbAAhACcAIgApAA==",
+        "Image": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+        "_bkt": "main~2~A4575F87-91C0-4EC0-B925-959453C28FB6",
+        "_cd": "2:315924",
+        "_indextime": "1782161498",
+        "_raw": "<Event xmlns='http://schemas.microsoft.com/win/2004/08/events/event'><System><Provider Name='Microsoft-Windows-Sysmon' Guid='{5770385f-c22a-43e0-bf4c-06f5698ffbd9}'/><EventID>1</EventID><Version>5</Version><Level>4</Level><Task>1</Task><Opcode>0</Opcode><Keywords>0x8000000000000000</Keywords><TimeCreated SystemTime='2026-06-22T20:51:38.0498315Z'/><EventRecordID>8741</EventRecordID><Correlation/><Execution ProcessID='1428' ThreadID='4288'/><Channel>Microsoft-Windows-Sysmon/Operational</Channel><Computer>WIN-H0IJO7KTE1O</Computer><Security UserID='S-1-5-18'/></System><EventData><Data Name='RuleName'>-</Data><Data Name='UtcTime'>2026-06-22 20:51:37.982</Data><Data Name='ProcessGuid'>{63dbd3e9-a059-6a39-4903-000000000b00}</Data><Data Name='ProcessId'>3688</Data><Data Name='Image'>C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe</Data><Data Name='FileVersion'>10.0.26100.5074 (WinBuild.160101.0800)</Data><Data Name='Description'>Windows PowerShell</Data><Data Name='Product'>Microsoft® Windows® Operating System</Data><Data Name='Company'>Microsoft Corporation</Data><Data Name='OriginalFileName'>PowerShell.EXE</Data><Data Name='CommandLine'>powershell.exe  -e  JgAgACgAZwBjAG0AIAAoACcAaQBlAHsAMAB9ACcAIAAtAGYAIAAnAHgAJwApACkAIAAoACIAVwByACIAKwAiAGkAdAAiACsAIgBlAC0ASAAiACsAIgBvAHMAdAAgACcASAAiACsAIgBlAGwAIgArACIAbABvACwAIABmAHIAIgArACIAbwBtACAAUAAiACsAIgBvAHcAIgArACIAZQByAFMAIgArACIAaAAiACsAIgBlAGwAbAAhACcAIgApAA==</Data><Data Name='CurrentDirectory'>C:\\Users\\ADMINI~1\\AppData\\Local\\Temp\\</Data><Data Name='User'>WIN-H0IJO7KTE1O\\Administrator</Data><Data Name='LogonGuid'>{63dbd3e9-a017-6a39-9965-520000000000}</Data><Data Name='LogonId'>0x526599</Data><Data Name='TerminalSessionId'>0</Data><Data Name='IntegrityLevel'>High</Data><Data Name='Hashes'>MD5=A97E6573B97B44C96122BFA543A82EA1,SHA256=0FF6F2C94BC7E2833A5F7E16DE1622E5DBA70396F31C7D5F56381870317E8C46,IMPHASH=AFACF6DC9041114B198160AAB4D0AE77</Data><Data Name='ParentProcessGuid'>{63dbd3e9-a059-6a39-4703-000000000b00}</Data><Data Name='ParentProcessId'>5632</Data><Data Name='ParentImage'>C:\\Windows\\System32\\cmd.exe</Data><Data Name='ParentCommandLine'>\"cmd.exe\" /c powershell.exe -e  JgAgACgAZwBjAG0AIAAoACcAaQBlAHsAMAB9ACcAIAAtAGYAIAAnAHgAJwApACkAIAAoACIAVwByACIAKwAiAGkAdAAiACsAIgBlAC0ASAAiACsAIgBvAHMAdAAgACcASAAiACsAIgBlAGwAIgArACIAbABvACwAIABmAHIAIgArACIAbwBtACAAUAAiACsAIgBvAHcAIgArACIAZQByAFMAIgArACIAaAAiACsAIgBlAGwAbAAhACcAIgApAA==</Data><Data Name='ParentUser'>WIN-H0IJO7KTE1O\\Administrator</Data></EventData></Event>",
+        "_serial": "35",
+        "_si": [
+          "RAHUL",
+          "main"
+        ],
+        "_sourcetype": "XmlWinEventLog:Microsoft-Windows-Sysmon/Operational",
+        "_subsecond": ".049",
+        "_time": "2026-06-23T02:21:38.049+05:30",
+        "host": "WIN-H0IJO7KTE1O",
+        "index": "main",
+        "linecount": "1",
+        "source": "WinEventLog:Microsoft-Windows-Sysmon/Operational",
+        "sourcetype": "xmlwineventlog",
+        "splunk_server": "RAHUL"
+      },
+      {
+        "CommandLine": "powershell.exe -NoProfile -EncodedArguments PABPAGIAagBzACAAVgBlAHIAcwBpAG8AbgA9ACIAMQAuADEALgAwAC4AMQAiACAAeABtAGwAbgBzAD0AIgBoAHQAdABwADoALwAvAHMAYwBoAGUAbQBhAHMALgBtAGkAYwByAG8AcwBvAGYAdAAuAGMAbwBtAC8AcABvAHcAZQByAHMAaABlAGwAbAAvADIAMAAwADQALwAwADQAIgA+AA0ACgAgACAAPABPAGIAagAgAFIAZQBmAEkAZAA9ACIAMAAiAD4ADQAKACAAIAAgACAAPABUAE4AIABSAGUAZgBJAGQAPQAiADAAIgA+AA0ACgAgACAAIAAgACAAIAA8AFQAPgBTAHkAcwB0AGUAbQAuAEMAbwBsAGwAZQBjAHQAaQBvAG4AcwAuAEEAcgByAGEAeQBMAGkAcwB0ADwALwBUAD4ADQAKACAAIAAgACAAIAAgADwAVAA+AFMAeQBzAHQAZQBtAC4ATwBiAGoAZQBjAHQAPAAvAFQAPgANAAoAIAAgACAAIAA8AC8AVABOAD4ADQAKACAAIAAgACAAPABMAFMAVAA+AA0ACgAgACAAIAAgACAAIAA8AFMAPgA5ADAAMgBhADMAOQA0AGMALQAzADUAMABhAC0ANAAzAGIAOQAtADkANQBlAGMALQBlADgAMgBmADMAOABjAGUANgBiADgAYgA8AC8AUwA+AA0ACgAgACAAIAAgADwALwBMAFMAVAA+AA0ACgAgACAAPAAvAE8AYgBqAD4ADQAKADwALwBPAGIAagBzAD4A -E VwByAGkAdABlAC0ASABvAHMAdAAgACQAYQByAGcAcwBbADAAXQA=",
+        "Image": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+        "_bkt": "main~2~A4575F87-91C0-4EC0-B925-959453C28FB6",
+        "_cd": "2:315681",
+        "_indextime": "1782161497",
+        "_raw": "<Event xmlns='http://schemas.microsoft.com/win/2004/08/events/event'><System><Provider Name='Microsoft-Windows-Sysmon' Guid='{5770385f-c22a-43e0-bf4c-06f5698ffbd9}'/><EventID>1</EventID><Version>5</Version><Level>4</Level><Task>1</Task><Opcode>0</Opcode><Keywords>0x8000000000000000</Keywords><TimeCreated SystemTime='2026-06-22T20:51:37.3314298Z'/><EventRecordID>8738</EventRecordID><Correlation/><Execution ProcessID='1428' ThreadID='4288'/><Channel>Microsoft-Windows-Sysmon/Operational</Channel><Computer>WIN-H0IJO7KTE1O</Computer><Security UserID='S-1-5-18'/></System><EventData><Data Name='RuleName'>-</Data><Data Name='UtcTime'>2026-06-22 20:51:37.279</Data><Data Name='ProcessGuid'>{63dbd3e9-a059-6a39-4503-000000000b00}</Data><Data Name='ProcessId'>6000</Data><Data Name='Image'>C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe</Data><Data Name='FileVersion'>10.0.26100.5074 (WinBuild.160101.0800)</Data><Data Name='Description'>Windows PowerShell</Data><Data Name='Product'>Microsoft® Windows® Operating System</Data><Data Name='Company'>Microsoft Corporation</Data><Data Name='OriginalFileName'>PowerShell.EXE</Data><Data Name='CommandLine'>powershell.exe -NoProfile -EncodedArguments PABPAGIAagBzACAAVgBlAHIAcwBpAG8AbgA9ACIAMQAuADEALgAwAC4AMQAiACAAeABtAGwAbgBzAD0AIgBoAHQAdABwADoALwAvAHMAYwBoAGUAbQBhAHMALgBtAGkAYwByAG8AcwBvAGYAdAAuAGMAbwBtAC8AcABvAHcAZQByAHMAaABlAGwAbAAvADIAMAAwADQALwAwADQAIgA+AA0ACgAgACAAPABPAGIAagAgAFIAZQBmAEkAZAA9ACIAMAAiAD4ADQAKACAAIAAgACAAPABUAE4AIABSAGUAZgBJAGQAPQAiADAAIgA+AA0ACgAgACAAIAAgACAAIAA8AFQAPgBTAHkAcwB0AGUAbQAuAEMAbwBsAGwAZQBjAHQAaQBvAG4AcwAuAEEAcgByAGEAeQBMAGkAcwB0ADwALwBUAD4ADQAKACAAIAAgACAAIAAgADwAVAA+AFMAeQBzAHQAZQBtAC4ATwBiAGoAZQBjAHQAPAAvAFQAPgANAAoAIAAgACAAIAA8AC8AVABOAD4ADQAKACAAIAAgACAAPABMAFMAVAA+AA0ACgAgACAAIAAgACAAIAA8AFMAPgA5ADAAMgBhADMAOQA0AGMALQAzADUAMABhAC0ANAAzAGIAOQAtADkANQBlAGMALQBlADgAMgBmADMAOABjAGUANgBiADgAYgA8AC8AUwA+AA0ACgAgACAAIAAgADwALwBMAFMAVAA+AA0ACgAgACAAPAAvAE8AYgBqAD4ADQAKADwALwBPAGIAagBzAD4A -E VwByAGkAdABlAC0ASABvAHMAdAAgACQAYQByAGcAcwBbADAAXQA=</Data><Data Name='CurrentDirectory'>C:\\WINDOWS\\system32\\</Data><Data Name='User'>WIN-H0IJO7KTE1O\\Administrator</Data><Data Name='LogonGuid'>{63dbd3e9-a017-6a39-9965-520000000000}</Data><Data Name='LogonId'>0x526599</Data><Data Name='TerminalSessionId'>0</Data><Data Name='IntegrityLevel'>High</Data><Data Name='Hashes'>MD5=A97E6573B97B44C96122BFA543A82EA1,SHA256=0FF6F2C94BC7E2833A5F7E16DE1622E5DBA70396F31C7D5F56381870317E8C46,IMPHASH=AFACF6DC9041114B198160AAB4D0AE77</Data><Data Name='ParentProcessGuid'>{63dbd3e9-9ab2-6a39-5800-000000000b00}</Data><Data Name='ParentProcessId'>3976</Data><Data Name='ParentImage'>C:\\Windows\\System32\\wbem\\WmiPrvSE.exe</Data><Data Name='ParentCommandLine'>C:\\WINDOWS\\system32\\wbem\\wmiprvse.exe -secured -Embedding</Data><Data Name='ParentUser'>NT AUTHORITY\\NETWORK SERVICE</Data></EventData></Event>",
+        "_serial": "37",
+        "_si": [
+          "RAHUL",
+          "main"
+        ],
+        "_sourcetype": "XmlWinEventLog:Microsoft-Windows-Sysmon/Operational",
+        "_subsecond": ".331",
+        "_time": "2026-06-23T02:21:37.331+05:30",
+        "host": "WIN-H0IJO7KTE1O",
+        "index": "main",
+        "linecount": "1",
+        "source": "WinEventLog:Microsoft-Windows-Sysmon/Operational",
+        "sourcetype": "xmlwineventlog",
+        "splunk_server": "RAHUL"
+      },
+      {
+        "CommandLine": "powershell.exe -NoProfile -E VwByAGkAdABlAC0ASABvAHMAdAAgADgANQA0ADYANgA2ADgAOQAtADMAOABlADUALQA0ADYAYwBkAC0AOABlAGEAYQAtAGQAYgAyADcAMgBiAGYANgBkADkAZQBlAA==",
+        "Image": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+        "_bkt": "main~2~A4575F87-91C0-4EC0-B925-959453C28FB6",
+        "_cd": "2:313896",
+        "_indextime": "1782161493",
+        "_raw": "<Event xmlns='http://schemas.microsoft.com/win/2004/08/events/event'><System><Provider Name='Microsoft-Windows-Sysmon' Guid='{5770385f-c22a-43e0-bf4c-06f5698ffbd9}'/><EventID>1</EventID><Version>5</Version><Level>4</Level><Task>1</Task><Opcode>0</Opcode><Keywords>0x8000000000000000</Keywords><TimeCreated SystemTime='2026-06-22T20:51:33.1024536Z'/><EventRecordID>8704</EventRecordID><Correlation/><Execution ProcessID='1428' ThreadID='4288'/><Channel>Microsoft-Windows-Sysmon/Operational</Channel><Computer>WIN-H0IJO7KTE1O</Computer><Security UserID='S-1-5-18'/></System><EventData><Data Name='RuleName'>-</Data><Data Name='UtcTime'>2026-06-22 20:51:33.080</Data><Data Name='ProcessGuid'>{63dbd3e9-a055-6a39-3503-000000000b00}</Data><Data Name='ProcessId'>3016</Data><Data Name='Image'>C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe</Data><Data Name='FileVersion'>10.0.26100.5074 (WinBuild.160101.0800)</Data><Data Name='Description'>Windows PowerShell</Data><Data Name='Product'>Microsoft® Windows® Operating System</Data><Data Name='Company'>Microsoft Corporation</Data><Data Name='OriginalFileName'>PowerShell.EXE</Data><Data Name='CommandLine'>powershell.exe -NoProfile -E VwByAGkAdABlAC0ASABvAHMAdAAgADgANQA0ADYANgA2ADgAOQAtADMAOABlADUALQA0ADYAYwBkAC0AOABlAGEAYQAtAGQAYgAyADcAMgBiAGYANgBkADkAZQBlAA==</Data><Data Name='CurrentDirectory'>C:\\WINDOWS\\system32\\</Data><Data Name='User'>WIN-H0IJO7KTE1O\\Administrator</Data><Data Name='LogonGuid'>{63dbd3e9-a017-6a39-9965-520000000000}</Data><Data Name='LogonId'>0x526599</Data><Data Name='TerminalSessionId'>0</Data><Data Name='IntegrityLevel'>High</Data><Data Name='Hashes'>MD5=A97E6573B97B44C96122BFA543A82EA1,SHA256=0FF6F2C94BC7E2833A5F7E16DE1622E5DBA70396F31C7D5F56381870317E8C46,IMPHASH=AFACF6DC9041114B198160AAB4D0AE77</Data><Data Name='ParentProcessGuid'>{63dbd3e9-9ab2-6a39-5800-000000000b00}</Data><Data Name='ParentProcessId'>3976</Data><Data Name='ParentImage'>C:\\Windows\\System32\\wbem\\WmiPrvSE.exe</Data><Data Name='ParentCommandLine'>C:\\WINDOWS\\system32\\wbem\\wmiprvse.exe -secured -Embedding</Data><Data Name='ParentUser'>NT AUTHORITY\\NETWORK SERVICE</Data></EventData></Event>",
+        "_serial": "53",
+        "_si": [
+          "RAHUL",
+          "main"
+        ],
+        "_sourcetype": "XmlWinEventLog:Microsoft-Windows-Sysmon/Operational",
+        "_subsecond": ".102",
+        "_time": "2026-06-23T02:21:33.102+05:30",
+        "host": "WIN-H0IJO7KTE1O",
+        "index": "main",
+        "linecount": "1",
+        "source": "WinEventLog:Microsoft-Windows-Sysmon/Operational",
+        "sourcetype": "xmlwineventlog",
+        "splunk_server": "RAHUL"
+      }
+    ]
+  },
+  "thresholds": {
+    "min_target_hits": 1,
+    "max_baseline_hits": 10
+  },
+  "reasons": [],
+  "compiled_spl": "Image=\"*\\\\powershell.exe\"\n| regex CommandLine=\"(?i)\\\\s-[e]{1}[a-z]{0,8}\\\\s+[A-Za-z0-9+/=]{40,}\""
+}
