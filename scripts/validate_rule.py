@@ -590,7 +590,7 @@ def main():
 
     # Print summary
     print(f"\n{'='*60}")
-    print(f"  VERDICT: {'✅ PASS' if passed else '❌ FAIL'}")
+    print(f"  VERDICT: {'PASS' if passed else 'FAIL'}")
     if not passed:
         for r in reasons:
             print(f"  → {r}")
