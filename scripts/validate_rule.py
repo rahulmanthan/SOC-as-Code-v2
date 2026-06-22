@@ -31,6 +31,7 @@ import os
 import sys
 import json
 import time
+import shutil
 import argparse
 import subprocess
 import tempfile
@@ -519,6 +520,11 @@ def main():
         "--indexing-wait", type=int, default=20,
         help="Seconds to wait for Splunk indexing after atomic test (default: 20)"
     )
+    parser.add_argument(
+        "--output-md-path",
+        help="Copy the markdown report to this path (for CI — lets the workflow "
+             "know exactly where to find the report for the PR comment step)"
+    )
     args = parser.parse_args()
 
     rule_path = Path(args.rule)
@@ -531,6 +537,14 @@ def main():
     print(f"  Rule: {rule_path.name}")
     print(f"  Time: {datetime.now(timezone.utc).isoformat()}")
     print(f"{'='*60}\n")
+
+    # Load .env for local development; CI uses GitHub Secrets instead
+    if not os.environ.get("GITHUB_ACTIONS"):
+        try:
+            from dotenv import load_dotenv
+            load_dotenv()
+        except ImportError:
+            pass  # python-dotenv not installed — env vars must be set manually
 
     # Load config from environment
     config = load_config()
@@ -569,6 +583,11 @@ def main():
         rule_meta, spl, scores, passed, reasons, args.report_dir
     )
 
+    # Copy MD to a specific path if requested (CI integration)
+    if args.output_md_path:
+        Path(args.output_md_path).parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(md_path, args.output_md_path)
+
     # Print summary
     print(f"\n{'='*60}")
     print(f"  VERDICT: {'✅ PASS' if passed else '❌ FAIL'}")
@@ -578,7 +597,17 @@ def main():
     print(f"\n  Reports written:")
     print(f"    {json_path}")
     print(f"    {md_path}")
+    if args.output_md_path:
+        print(f"    {args.output_md_path}  (CI copy)")
     print(f"{'='*60}\n")
+
+    # Write verdict to GITHUB_OUTPUT so downstream steps can branch on it
+    github_output = os.environ.get("GITHUB_OUTPUT")
+    if github_output:
+        with open(github_output, "a", encoding="utf-8") as ghf:
+            ghf.write(f"verdict={'PASS' if passed else 'FAIL'}\n")
+            ghf.write(f"report_json={json_path}\n")
+            ghf.write(f"report_md={md_path}\n")
 
     # Exit code drives the GitHub Actions gate
     sys.exit(0 if passed else 1)
