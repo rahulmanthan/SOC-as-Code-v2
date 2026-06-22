@@ -1,0 +1,47 @@
+title: LSASS Memory Dump via comsvcs.dll MiniDump
+id: 7a3f9c2e-4b1d-4e8a-9c6f-2a5d8b3e1f7c
+status: experimental
+description: >
+  Detects LSASS memory dumping using the MiniDump export of the legitimate
+  Windows DLL comsvcs.dll, invoked via rundll32.exe. This is a classic
+  Living-off-the-Land (LOLBin) credential dumping technique requiring no
+  external tools — it abuses a signed Microsoft binary to extract credentials
+  from LSASS memory. The resulting .dmp file can be processed offline with
+  Mimikatz or pypykatz to extract plaintext credentials and hashes.
+  Observed CommandLine pattern from real execution:
+  rundll32.exe comsvcs.dll, MiniDump <PID> <output_path> full
+references:
+  - https://attack.mitre.org/techniques/T1003/001/
+  - https://github.com/redcanaryco/atomic-red-team/blob/master/atomics/T1003.001/T1003.001.md
+  - https://lolbas-project.github.io/lolbas/Libraries/Comsvcs/
+author: Rahul Kumar Manthan
+date: 2026-06-23
+tags:
+  - attack.credential_access
+  - attack.t1003.001
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection_image:
+    Image|endswith: '\rundll32.exe'
+
+  selection_comsvcs:
+    CommandLine|contains: 'comsvcs'
+
+  selection_minidump_upper:
+    CommandLine|contains: 'MiniDump'
+
+  selection_minidump_lower:
+    CommandLine|contains: 'minidump'
+
+  condition: selection_image and selection_comsvcs and (selection_minidump_upper or selection_minidump_lower)
+falsepositives:
+  - Legitimate use of comsvcs.dll MiniDump by Windows Error Reporting or
+    crash dump tooling is theoretically possible but extremely rare in
+    enterprise environments. The combination of rundll32.exe + comsvcs.dll
+    + MiniDump in a single command line has no common legitimate use case
+    and should be treated as high-confidence malicious activity.
+  - Security tooling (EDR agents, crash dump utilities) may trigger this
+    if they use the same mechanism -- allowlist by ParentImage if needed.
+level: high
