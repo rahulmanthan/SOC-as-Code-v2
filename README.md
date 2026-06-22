@@ -1,4 +1,4 @@
-# SOC-as-Code v2
+# SOC-as-Code
 
 A self-validating detection engineering pipeline. Every Sigma rule is proven
 against real, freshly-executed attack telemetry — not synthetic logs — before
