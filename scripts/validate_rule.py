@@ -132,6 +132,17 @@ def compile_sigma_to_spl(rule_path):
     """
     print(f"[1/4] Compiling Sigma rule to SPL...")
 
+    # Load rule and check for custom SPL override
+    with open(rule_path, "r", encoding="utf-8") as f:
+        rule = yaml.safe_load(f)
+
+    custom_spl = rule.get("custom", {}).get("spl_query")
+
+    if custom_spl:
+        print("        Using custom Splunk query from rule")
+        print(f"        SPL: {custom_spl[:120]}{'...' if len(custom_spl) > 120 else ''}")
+        return custom_spl
+
     result = subprocess.run(
         ["sigma", "convert", "-t", "splunk", "-p", "splunk_windows", str(rule_path)],
         capture_output=True,
@@ -144,13 +155,13 @@ def compile_sigma_to_spl(rule_path):
         sys.exit(2)
 
     spl = result.stdout.strip()
+
     if not spl:
         print("[ERROR] Sigma compilation produced empty output.")
         sys.exit(2)
 
     print(f"        SPL: {spl[:120]}{'...' if len(spl) > 120 else ''}")
     return spl
-
 
 # ─────────────────────────────────────────────
 #  Step 3 — Execute Atomic Red Team on the VM
