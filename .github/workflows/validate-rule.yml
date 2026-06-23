@@ -1,5 +1,5 @@
 # ──────────────────────────────────────────────────────────────
-#  SOC-as-Code-v2 — Detection Rule Validation Pipeline
+#  SOC-as-Code-v2 — Detection Rule Validation + Promotion Pipeline
 # ──────────────────────────────────────────────────────────────
 #  Trigger:  Any PR or push that touches rules/staging/**
 #  Runner:   Self-hosted (your machine — needs network access
@@ -13,7 +13,13 @@
 #       c. Query Splunk across three corpora (target / cross-domain / benign)
 #       d. Score and write a report
 #    3. Post the combined report as a PR comment
-#    4. Gate the merge: green check if all rules pass, red X if any fail
+#    4. For each PASSING rule:
+#       a. Promote to rules/production/ (correct tactic subfolder)
+#       b. Deploy as a live Splunk saved search
+#    5. For each FAILING rule:
+#       a. File a GitHub Issue with the full report
+#       b. Label the PR as 'needs-review'
+#    6. Gate the merge: green check if all rules pass, red X if any fail
 # ──────────────────────────────────────────────────────────────
 
 name: Validate Staging Rules
@@ -41,11 +47,11 @@ jobs:
     name: Validate Detection Rules
     runs-on: self-hosted
 
-    # pull-requests:write  → post PR comments
-    # issues:write         → file review issues on failure (Phase 7)
-    # contents:read        → checkout; Phase 7 will need 'write' for auto-promotion
+    # contents:write   → commit promoted rules + push
+    # pull-requests:write → post PR comments
+    # issues:write     → file review issues on failure
     permissions:
-      contents: read
+      contents: write
       pull-requests: write
       issues: write
 
@@ -55,6 +61,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0   # full history so git diff works on PRs
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       # ── 2. Install Python dependencies ───────────────────────
       - name: Install Python dependencies
@@ -128,6 +135,8 @@ jobs:
           $allPassed = $true
           $reportMDs = [System.Collections.ArrayList]@()
           $summary   = [System.Collections.ArrayList]@()
+          $passed    = [System.Collections.ArrayList]@()
+          $failed    = [System.Collections.ArrayList]@()
 
           foreach ($rule in $rules) {
               $rule = $rule.Trim()
@@ -142,9 +151,20 @@ jobs:
               Write-Host "::endgroup::"
 
               switch ($rc) {
-                  0 { [void]$summary.Add("| ``$slug`` | T1 PASS |") }
-                  1 { [void]$summary.Add("| ``$slug`` | FAIL |"); $allPassed = $false }
-                  default { [void]$summary.Add("| ``$slug`` | ERROR (exit $rc) |"); $allPassed = $false }
+                  0 {
+                      [void]$summary.Add("| ``$slug`` | PASS |")
+                      [void]$passed.Add($rule)
+                  }
+                  1 {
+                      [void]$summary.Add("| ``$slug`` | FAIL |")
+                      [void]$failed.Add($rule)
+                      $allPassed = $false
+                  }
+                  default {
+                      [void]$summary.Add("| ``$slug`` | ERROR (exit $rc) |")
+                      [void]$failed.Add($rule)
+                      $allPassed = $false
+                  }
               }
 
               if (Test-Path $mdOut) { [void]$reportMDs.Add($mdOut) }
@@ -173,6 +193,10 @@ jobs:
           $lines -join "`n" | Out-File -FilePath $commentPath -Encoding utf8 -NoNewline
           "report_path=$commentPath" | Out-File -Append -FilePath $env:GITHUB_OUTPUT -Encoding utf8
 
+          # Write passed/failed lists for downstream steps
+          "passed=$($passed -join ',')" | Out-File -Append -FilePath $env:GITHUB_OUTPUT -Encoding utf8
+          "failed=$($failed -join ',')" | Out-File -Append -FilePath $env:GITHUB_OUTPUT -Encoding utf8
+
           if ($allPassed) {
               "verdict=PASS" | Out-File -Append -FilePath $env:GITHUB_OUTPUT -Encoding utf8
               Write-Host "All rules passed validation."
@@ -189,7 +213,116 @@ jobs:
           issue-number: ${{ github.event.pull_request.number }}
           body-path: ${{ steps.validate.outputs.report_path }}
 
-      # ── 6. Upload full reports as workflow artifacts ──────────
+      # ── 6. Promote passing rules ─────────────────────────────
+      - name: Promote passing rules to production
+        if: steps.validate.outputs.passed != '' && steps.detect.outputs.skip != 'true'
+        id: promote
+        shell: pwsh
+        env:
+          SPLUNK_HOST:     ${{ secrets.SPLUNK_HOST }}
+          SPLUNK_PORT:     ${{ secrets.SPLUNK_PORT }}
+          SPLUNK_USER:     ${{ secrets.SPLUNK_USER }}
+          SPLUNK_PASSWORD: ${{ secrets.SPLUNK_PASSWORD }}
+        run: |
+          $passedRules = "${{ steps.validate.outputs.passed }}" -split ","
+          $promoted = [System.Collections.ArrayList]@()
+
+          foreach ($rule in $passedRules) {
+              $rule = $rule.Trim()
+              if (-not $rule) { continue }
+
+              Write-Host "::group::Promoting $rule"
+
+              # Step A: Copy rule to rules/production/<tactic>/
+              python scripts/promote_rule.py --rule "$rule"
+              if ($LASTEXITCODE -ne 0) {
+                  Write-Host "::warning::Failed to promote $rule"
+                  Write-Host "::endgroup::"
+                  continue
+              }
+
+              # Step B: Deploy as a live Splunk saved search
+              # The promote script placed the file in production; find it
+              $slug = (Split-Path $rule -Leaf)
+              $prodPath = Get-ChildItem -Path "rules/production" -Recurse -Filter $slug |
+                          Select-Object -First 1 -ExpandProperty FullName
+              if ($prodPath) {
+                  python scripts/deploy_saved_search.py --rule "$prodPath"
+                  if ($LASTEXITCODE -ne 0) {
+                      Write-Host "::warning::Splunk deployment failed for $rule (rule still promoted to production)"
+                  }
+              }
+
+              [void]$promoted.Add($rule)
+              Write-Host "::endgroup::"
+          }
+
+          "promoted_count=$($promoted.Count)" | Out-File -Append -FilePath $env:GITHUB_OUTPUT -Encoding utf8
+
+      # ── 7. Commit promoted rules ─────────────────────────────
+      - name: Commit and push promoted rules
+        if: steps.validate.outputs.passed != '' && steps.detect.outputs.skip != 'true'
+        shell: pwsh
+        run: |
+          # Configure git for the Actions bot
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          # Stage any new/changed files in rules/production/
+          git add rules/production/
+
+          # Check if there's anything to commit
+          $changes = git diff --cached --name-only
+          if ($changes) {
+              git commit -m "Promote validated rules to production [automated]"
+
+              # Push to the current branch (works for both PR branches and main)
+              $branch = "${{ github.head_ref || github.ref_name }}"
+              git push origin HEAD:$branch
+              Write-Host "Promoted rules committed and pushed."
+          } else {
+              Write-Host "No new rules to commit — production is already up to date."
+          }
+
+      # ── 8. File issues for failing rules ─────────────────────
+      - name: File review issues for failing rules
+        if: steps.validate.outputs.failed != '' && steps.detect.outputs.skip != 'true'
+        shell: pwsh
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $failedRules = "${{ steps.validate.outputs.failed }}" -split ","
+          $prNumber = "${{ github.event.pull_request.number }}"
+
+          foreach ($rule in $failedRules) {
+              $rule = $rule.Trim()
+              if (-not $rule) { continue }
+
+              $slug = (Split-Path $rule -Leaf) -replace '\.ya?ml$', ''
+              $reportMd = "reports/ci_$slug.md"
+
+              Write-Host "::group::Filing issue for $rule"
+
+              $issueArgs = @(
+                  "scripts/file_review_issue.py",
+                  "--rule", $rule,
+                  "--report", $reportMd
+              )
+
+              if ($prNumber) {
+                  $issueArgs += @("--pr-number", $prNumber)
+              }
+
+              python @issueArgs
+
+              if ($LASTEXITCODE -ne 0) {
+                  Write-Host "::warning::Failed to file issue for $rule"
+              }
+
+              Write-Host "::endgroup::"
+          }
+
+      # ── 9. Upload full reports as workflow artifacts ──────────
       - name: Upload reports
         if: always() && steps.detect.outputs.skip != 'true'
         uses: actions/upload-artifact@v4
@@ -198,7 +331,7 @@ jobs:
           path: reports/
           retention-days: 30
 
-      # ── 7. Gate the merge ────────────────────────────────────
+      # ── 10. Gate the merge ───────────────────────────────────
       - name: Gate — fail job if any rule failed validation
         if: steps.detect.outputs.skip != 'true'
         shell: pwsh

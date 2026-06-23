@@ -1,4 +1,4 @@
-# SOC-as-Code
+# SOC-as-Code v2
 
 A self-validating detection engineering pipeline. Every Sigma rule is proven
 against real, freshly-executed attack telemetry — not synthetic logs — before
@@ -36,15 +36,19 @@ rules/
 ├── staging/         rules under test, not yet trusted
 └── production/      validated rules, organized by ATT&CK tactic
     ├── execution/
-    └── persistence/
+    ├── persistence/
+    └── credential_access/
 scripts/
-└── validate_rule.py orchestration script (compile → attack → score → report)
-reports/             automated validation reports (JSON + Markdown)
+├── validate_rule.py       orchestration (compile → attack → score → report)
+├── promote_rule.py        auto-promote passing rules to production/
+├── deploy_saved_search.py deploy rules as live Splunk saved searches
+└── file_review_issue.py   auto-file GitHub Issues for failing rules
+reports/                   automated validation reports (JSON + Markdown)
 .github/
 ├── workflows/
-│   └── validate-rule.yml   CI/CD workflow — the "one click" pipeline
-└── CODEOWNERS              enforces review for rules/production/ changes
-docs/                validation log, design notes
+│   └── validate-rule.yml  CI/CD workflow — the full pipeline
+└── CODEOWNERS             enforces review for rules/production/ changes
+docs/                      validation log, design notes
 ```
 
 ## Promotion gate
@@ -60,6 +64,8 @@ than silently dropped or silently merged.
 |---|---|---|---|
 | `T1059.001_encoded_powershell.yml` | T1059.001 | Execution | Production |
 | `T1053.005_schtasks_shell_persistence.yml` | T1053.005 | Persistence | Production |
+| `T1003.001_lsass_comsvcs_minidump.yml` | T1003.001 | Credential Access | Production |
+| `T1110.001_password_guessing_failed_logons.yml` | T1110.001 | Credential Access | Production |
 
 ## Lab environment
 
@@ -78,7 +84,7 @@ than silently dropped or silently merged.
 - [x] Self-hosted GitHub Actions runner
 - [x] Automated orchestration (compile → trigger atomic test → score → report)
 - [x] Full one-click validation loop (CI workflow wired)
-- [ ] Production promotion gate (auto-promote passing rules + deploy Splunk saved searches)
-- [ ] Auto-file GitHub Issues for failing rules
-- [ ] Expansion to additional domains (credential access, defense evasion, C2)
+- [x] Production promotion gate (auto-promote passing rules + deploy Splunk saved searches)
+- [x] Auto-file GitHub Issues for failing rules
+- [ ] Expansion to additional domains (defense evasion, C2, discovery)
 
