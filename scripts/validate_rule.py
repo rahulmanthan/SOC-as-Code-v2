@@ -365,15 +365,15 @@ def evaluate(scores):
 
     if scores["target_hits"] < THRESHOLDS["min_target_hits"]:
         reasons.append(
-            f"FAIL — target corpus: {scores['target_hits']} hit(s), "
-            f"need ≥{THRESHOLDS['min_target_hits']}. "
+            f"FAIL -- target corpus: {scores['target_hits']} hit(s), "
+            f"need >={THRESHOLDS['min_target_hits']}. "
             f"Rule did not detect the Atomic Red Team execution."
         )
 
     if scores["baseline_hits"] > THRESHOLDS["max_baseline_hits"]:
         reasons.append(
-            f"FAIL — benign baseline noise: {scores['baseline_hits']} hit(s) in 24h, "
-            f"threshold ≤{THRESHOLDS['max_baseline_hits']}. "
+            f"FAIL -- benign baseline noise: {scores['baseline_hits']} hit(s) in 24h, "
+            f"threshold <={THRESHOLDS['max_baseline_hits']}. "
             f"Rule generates excessive false positives."
         )
 
@@ -604,7 +604,7 @@ def main():
     print(f"  VERDICT: {'PASS' if passed else 'FAIL'}")
     if not passed:
         for r in reasons:
-            print(f"  → {r}")
+            print(f"  -> {r}")
     print(f"\n  Reports written:")
     print(f"    {json_path}")
     print(f"    {md_path}")

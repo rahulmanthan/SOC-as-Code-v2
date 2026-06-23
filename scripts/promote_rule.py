@@ -69,7 +69,7 @@ def detect_tactic(rule_path):
         print(f"[INFO] No tactic tag found; using staging subfolder name: {parent}")
         return parent
 
-    print("[WARNING] Cannot determine tactic — no ATT&CK tactic tag and no subfolder hint.")
+    print("[WARNING] Cannot determine tactic -- no ATT&CK tactic tag and no subfolder hint.")
     return None
 
 
@@ -92,7 +92,7 @@ def promote(rule_path, production_base="rules/production"):
     dest_path = dest_dir / rule_path.name
     shutil.copy2(str(rule_path), str(dest_path))
 
-    print(f"[PROMOTE] {rule_path} → {dest_path}")
+    print(f"[PROMOTE] {rule_path} -> {dest_path}")
     return str(dest_path)
 
 

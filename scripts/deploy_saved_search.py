@@ -229,7 +229,7 @@ def list_saved_searches(config):
 
     for entry in soc_searches:
         content = entry["content"]
-        print(f"  📋 {entry['name']}")
+        print(f"  * {entry['name']}")
         print(f"     Schedule:  {content.get('cron_schedule', 'N/A')}")
         print(f"     Enabled:   {'Yes' if content.get('disabled') == '0' else 'No'}")
         print(f"     Search:    {content.get('search', '')[:80]}...")
