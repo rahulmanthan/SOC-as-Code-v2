@@ -1,0 +1,41 @@
+title: Remote System Discovery via net.exe
+id: e1a6c5d7-3f8b-4e2c-fc0a-9b6e7c1d5a3f
+status: experimental
+description: >
+  Detects net.exe or net1.exe used for remote system and domain enumeration.
+  Adversaries commonly run net view, net group, net user, and net localgroup
+  to discover domain controllers, shares, user accounts, and group memberships
+  during the reconnaissance phase of an intrusion. These commands are among the
+  first executed after gaining initial access to map the Active Directory
+  environment and identify high-value targets for lateral movement.
+references:
+  - https://attack.mitre.org/techniques/T1018/
+  - https://github.com/redcanaryco/atomic-red-team/blob/master/atomics/T1018/T1018.md
+author: Rahul Kumar Manthan
+date: 2026-06-24
+tags:
+  - attack.discovery
+  - attack.t1018
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection_image:
+    Image|endswith:
+      - '\net.exe'
+      - '\net1.exe'
+  selection_recon:
+    CommandLine|contains:
+      - ' view'
+      - ' group'
+      - ' localgroup'
+      - ' user /domain'
+      - ' accounts'
+      - ' share'
+  condition: selection_image and selection_recon
+falsepositives:
+  - System administrators using net commands for routine account or share
+    management. Common in help desk and provisioning workflows.
+  - Login scripts that map network drives via net use (excluded by the
+    detection — net use is not in the selection).
+level: medium

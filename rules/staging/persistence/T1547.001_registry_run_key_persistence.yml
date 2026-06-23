@@ -1,0 +1,41 @@
+title: Registry Run Key Persistence
+id: c9e4a3b5-1d6f-4c0a-da8e-7f4c5a9b3e1d
+status: experimental
+description: >
+  Detects modification of Windows Registry Run and RunOnce keys, which cause
+  programs to execute automatically at user logon. This is one of the most
+  common persistence mechanisms used by both malware and red teams. The rule
+  triggers on reg.exe adding values to the standard autostart locations:
+    HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Run
+    HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Run
+    ...and their RunOnce variants.
+  While some legitimate software uses Run keys (e.g. OneDrive, antivirus
+  updaters), the combination of reg.exe directly manipulating these keys
+  is a strong indicator of manual or scripted persistence setup.
+references:
+  - https://attack.mitre.org/techniques/T1547/001/
+  - https://github.com/redcanaryco/atomic-red-team/blob/master/atomics/T1547.001/T1547.001.md
+author: Rahul Kumar Manthan
+date: 2026-06-24
+tags:
+  - attack.persistence
+  - attack.t1547.001
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection_reg:
+    Image|endswith: '\reg.exe'
+  selection_add:
+    CommandLine|contains: 'add'
+  selection_run_key:
+    CommandLine|contains:
+      - '\CurrentVersion\Run'
+      - '\CurrentVersion\RunOnce'
+  condition: selection_reg and selection_add and selection_run_key
+falsepositives:
+  - Legitimate software installers that register autostart entries via
+    reg.exe rather than through the Windows Installer API. Common with
+    custom enterprise deployment scripts.
+  - IT administrators manually adding startup programs during provisioning.
+level: high

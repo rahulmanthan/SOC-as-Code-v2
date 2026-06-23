@@ -1,0 +1,32 @@
+title: System Information Discovery via systeminfo.exe
+id: b8d3f2a4-0c5e-4b9f-cf7d-6e3b4f8a2d0c
+status: experimental
+description: >
+  Detects execution of systeminfo.exe, a built-in Windows utility that
+  enumerates detailed host configuration including OS version, hardware,
+  hotfixes, network adapters, and domain membership. Adversaries routinely
+  run systeminfo as one of the first post-compromise discovery commands to
+  profile the target environment and determine next steps. Especially
+  suspicious when spawned by cmd.exe, powershell.exe, or a scripting engine.
+references:
+  - https://attack.mitre.org/techniques/T1082/
+  - https://github.com/redcanaryco/atomic-red-team/blob/master/atomics/T1082/T1082.md
+author: Rahul Kumar Manthan
+date: 2026-06-24
+tags:
+  - attack.discovery
+  - attack.t1082
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection:
+    Image|endswith: '\systeminfo.exe'
+  condition: selection
+falsepositives:
+  - System administrators running systeminfo for legitimate inventory or
+    troubleshooting purposes. Frequency-based tuning recommended — a single
+    execution is normal, rapid repeated execution or execution from unusual
+    parent processes (e.g. wmiprvse.exe, mshta.exe) is suspicious.
+  - Enterprise asset management or SCCM inventory scripts.
+level: low

@@ -1,0 +1,41 @@
+title: Rundll32 Proxy Execution via URL.dll or ieframe.dll
+id: a7c2e1f3-9b4d-4a8e-bf6c-5d2a3e7f1c9b
+status: experimental
+description: >
+  Detects rundll32.exe loading url.dll or ieframe.dll to open URLs or execute
+  code. Adversaries abuse this LOLBin technique to proxy execution through
+  legitimate signed Windows binaries, bypassing application whitelisting and
+  blending into normal system activity. Common patterns include:
+    rundll32.exe url.dll,OpenURL <malicious_url_or_file>
+    rundll32.exe ieframe.dll,OpenURL <payload>
+  This is a well-documented Living-off-the-Land technique that requires no
+  additional tooling — it uses only built-in Windows components.
+references:
+  - https://attack.mitre.org/techniques/T1218/011/
+  - https://github.com/redcanaryco/atomic-red-team/blob/master/atomics/T1218.011/T1218.011.md
+  - https://lolbas-project.github.io/lolbas/Binaries/Rundll32/
+author: Rahul Kumar Manthan
+date: 2026-06-24
+tags:
+  - attack.defense_evasion
+  - attack.t1218.011
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection_image:
+    Image|endswith: '\rundll32.exe'
+  selection_dll:
+    CommandLine|contains:
+      - 'url.dll'
+      - 'ieframe.dll'
+  selection_export:
+    CommandLine|contains:
+      - 'OpenURL'
+      - 'FileProtocolHandler'
+  condition: selection_image and selection_dll and selection_export
+falsepositives:
+  - Legitimate software installation or update mechanisms that use rundll32
+    to open URLs via url.dll. Rare in practice but possible with some
+    legacy enterprise applications.
+level: high

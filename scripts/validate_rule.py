@@ -195,29 +195,56 @@ Invoke-AtomicTest {technique_id} `
 Write-Output "ATOMIC_DONE"
 """
 
-    try:
-        session = winrm.Session(
-            config["vm_host"],
-            auth=(config["vm_user"], config["vm_pass"]),
-            transport="ntlm",
-            server_cert_validation="ignore",
-            operation_timeout_sec=90,
-            read_timeout_sec=100,
-        )
+    import threading
 
-        result = session.run_ps(ps_script)
-        output = result.std_out.decode("utf-8", errors="replace")
-        stderr = result.std_err.decode("utf-8", errors="replace")
+    result_holder = {"output": None, "stderr": None, "status": None, "error": None}
+
+    def _run_winrm():
+        try:
+            session = winrm.Session(
+                config["vm_host"],
+                auth=(config["vm_user"], config["vm_pass"]),
+                transport="ntlm",
+                server_cert_validation="ignore",
+                operation_timeout_sec=90,
+                read_timeout_sec=100,
+            )
+            result = session.run_ps(ps_script)
+            result_holder["output"] = result.std_out.decode("utf-8", errors="replace")
+            result_holder["stderr"] = result.std_err.decode("utf-8", errors="replace")
+            result_holder["status"] = result.status_code
+        except Exception as e:
+            result_holder["error"] = str(e)
+
+    try:
+        thread = threading.Thread(target=_run_winrm, daemon=True)
+        thread.start()
+        thread.join(timeout=120)  # Hard cap: 2 minutes
+
+        if thread.is_alive():
+            print("[WARNING] Atomic test timed out after 120s (test may be interactive).")
+            print("          Proceeding to scoring with whatever telemetry was generated.")
+            return True  # Partial execution may still have generated logs
+
+        if result_holder["error"]:
+            print(f"[ERROR] WinRM execution failed: {result_holder['error']}")
+            return False
+
+        output = result_holder["output"] or ""
+        stderr = result_holder["stderr"] or ""
 
         if "ATOMIC_DONE" in output:
-            print(f"        Atomic test completed (status {result.status_code})")
+            print(f"        Atomic test completed (status {result_holder['status']})")
             return True
         else:
             print(f"[WARNING] Atomic test may not have completed cleanly.")
             if stderr:
                 print(f"          stderr: {stderr[:200]}")
-            return True  # Still proceed — partial execution may still generate logs
+            return True  # Still proceed -- partial execution may still generate logs
 
+    except KeyboardInterrupt:
+        print("\n[INTERRUPTED] Atomic test cancelled by user. Proceeding to scoring.")
+        return True
     except Exception as e:
         print(f"[ERROR] WinRM execution failed: {e}")
         return False

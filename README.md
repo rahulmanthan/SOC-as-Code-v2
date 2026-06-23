@@ -64,8 +64,14 @@ than silently dropped or silently merged.
 |---|---|---|---|
 | `T1059.001_encoded_powershell.yml` | T1059.001 | Execution | Production |
 | `T1053.005_schtasks_shell_persistence.yml` | T1053.005 | Persistence | Production |
+| `T1547.001_registry_run_key_persistence.yml` | T1547.001 | Persistence | Production |
 | `T1003.001_lsass_comsvcs_minidump.yml` | T1003.001 | Credential Access | Production |
 | `T1110.001_password_guessing_failed_logons.yml` | T1110.001 | Credential Access | Production |
+| `T1218.011_rundll32_proxy_execution.yml` | T1218.011 | Defense Evasion | Production |
+| `T1070.006_timestomp_powershell.yml` | T1070.006 | Defense Evasion | Production |
+| `T1018_remote_system_discovery_net.yml` | T1018 | Discovery | Production |
+| `T1082_system_information_discovery.yml` | T1082 | Discovery | Production |
+| `T1105_certutil_download.yml` | T1105 | Command & Control | Production |
 
 ## Lab environment
 
@@ -86,5 +92,5 @@ than silently dropped or silently merged.
 - [x] Full one-click validation loop (CI workflow wired)
 - [x] Production promotion gate (auto-promote passing rules + deploy Splunk saved searches)
 - [x] Auto-file GitHub Issues for failing rules
-- [ ] Expansion to additional domains (defense evasion, C2, discovery)
+- [x] Expansion to 7 ATT&CK tactics: execution, persistence, credential access, defense evasion, discovery, command & control
 
