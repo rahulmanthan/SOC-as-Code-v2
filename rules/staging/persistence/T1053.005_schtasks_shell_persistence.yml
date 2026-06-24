@@ -1,0 +1,44 @@
+title: Scheduled Task Created to Run a Command Interpreter
+id: 4d2a7c1e-9b3f-4e6a-8c5d-1f9a2b4e7c8d
+status: experimental
+description: >
+  Detects creation of a scheduled task (via schtasks.exe /create) whose task
+  run (/tr) target directly invokes a command interpreter such as cmd.exe or
+  powershell.exe. Legitimate scheduled tasks (Windows Update, OEM utilities,
+  antivirus, backup software) overwhelmingly point at signed application
+  binaries, not raw shells -- a task wired to a shell is a common persistence
+  pattern, frequently paired with onlogon/onstart triggers to survive reboot.
+references:
+  - https://attack.mitre.org/techniques/T1053/005/
+  - https://github.com/redcanaryco/atomic-red-team/blob/master/atomics/T1053.005/T1053.005.md
+  - https://redcanary.com/threat-detection-report/techniques/scheduled-task/
+author: Rahul Kumar Manthan
+date: 2026-06-22
+tags:
+  - attack.persistence
+  - attack.privilege_escalation
+  - attack.t1053.005
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection_image:
+    Image|endswith: '\schtasks.exe'
+  selection_create:
+    CommandLine|contains: '/create'
+  selection_shell_target:
+    CommandLine|contains:
+      - 'cmd.exe'
+      - 'powershell.exe'
+      - 'pwsh.exe'
+      - 'wscript.exe'
+      - 'cscript.exe'
+      - 'mshta.exe'
+  condition: selection_image and selection_create and selection_shell_target
+falsepositives:
+  - Some legitimate IT-managed automation (e.g. internal admin scripts, certain
+    backup or patching tools) does schedule tasks that wrap a PowerShell or
+    batch script. Worth allowlisting known-good task names or source hosts
+    once observed in a real environment, rather than tuning the rule itself
+    down to the point of missing genuine persistence attempts.
+level: medium

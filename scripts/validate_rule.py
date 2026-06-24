@@ -68,6 +68,10 @@ def load_config():
         "vm_host":       os.environ["VM_HOST"],
         "vm_user":       os.environ["VM_USER"],
         "vm_pass":       os.environ["VM_PASSWORD"],
+        "vm_hostname": os.environ.get(
+            "VM_HOSTNAME",
+            "WIN-H0IJO7KTE1O"
+        ),
         "atomics_path":  os.environ.get(
             "ATOMICS_PATH",
             r"C:\AtomicRedTeam\atomic-red-team\atomics"
@@ -285,9 +289,9 @@ def splunk_search(config, spl, earliest="-15m", latest="now", label=""):
         return None
 
     job_id = resp.json()["sid"]
-
+    
     # Poll until complete
-    for attempt in range(20):
+    for attempt in range(60):
         time.sleep(3)
         status_resp = requests.get(
             f"{base_url}/services/search/jobs/{job_id}",
@@ -301,8 +305,8 @@ def splunk_search(config, spl, earliest="-15m", latest="now", label=""):
             break
     else:
         print(f"[WARNING] Splunk job timed out ({label})")
-        return []
-
+        return None
+    
     # Fetch results
     results_resp = requests.get(
         f"{base_url}/services/search/jobs/{job_id}/results",
@@ -331,10 +335,15 @@ def score_rule(config, spl, technique_id, indexing_wait=20):
 
     # TARGET CORPUS — last 20 minutes (covers the atomic test we just ran)
     target_results = splunk_search(
-        config, spl,
-        earliest="-15m",
-        latest="now",
-        label="target"
+    config,
+    spl,
+    earliest="-15m",
+    latest="now",
+    label="target"
+)
+    if target_results is None:
+        raise RuntimeError(
+            "Target corpus search failed."
     )
     target_hits = len(target_results) if target_results is not None else 0
     print(f"        Target corpus:      {target_hits} hit(s)")
@@ -347,15 +356,41 @@ def score_rule(config, spl, technique_id, indexing_wait=20):
         latest=f"-{indexing_wait + 60}s",
         label="cross-domain"
     )
+    if leakage_results is None:
+        raise RuntimeError(
+         "Cross-domain corpus search failed."
+    )
     leakage_hits = len(leakage_results) if leakage_results is not None else 0
     print(f"        Cross-domain corpus: {leakage_hits} hit(s) (historical false positives)")
 
     # BENIGN BASELINE — 24 hours ago (a window with no atomic tests)
+    # NOTE: we cannot safely string-concatenate "NOT Computer=..." onto the
+    # end of `spl`, because compiled/custom SPL frequently ends in a piped
+    # command (e.g. `| regex ...`, `| where ...`, `| stats ...`) rather than
+    # a bare search clause. Appending a bare boolean clause directly after
+    # a pipe stage produces invalid SPL and Splunk rejects the job outright
+    # (this is exactly what caused "Baseline corpus search failed" above).
+    # Adding the exclusion as its own `search` pipe stage is valid no
+    # matter what the preceding SPL looks like.
+    baseline_spl = (
+        spl +
+        f' | search NOT Computer="{config["vm_hostname"]}"'
+    )
+
+    print("\nDEBUG BASELINE SPL:")
+    print(baseline_spl)
+
     baseline_results = splunk_search(
-        config, spl,
-        earliest="-48h",
-        latest="-24h",
+        config,
+        baseline_spl,
+        earliest="-12h",
+        latest="-1h",
         label="benign-baseline"
+    )
+
+    if baseline_results is None:
+        raise RuntimeError(
+            "Baseline corpus search failed."
     )
     baseline_hits = len(baseline_results) if baseline_results is not None else 0
     print(f"        Benign baseline:     {baseline_hits} hit(s) in 24h quiet window")
@@ -555,7 +590,7 @@ def main():
         help="Directory to write reports to (default: reports/)"
     )
     parser.add_argument(
-        "--indexing-wait", type=int, default=120,
+        "--indexing-wait", type=int, default=20,
         help="Seconds to wait for Splunk indexing after atomic test (default: 20)"
     )
     parser.add_argument(
