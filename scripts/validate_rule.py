@@ -332,7 +332,7 @@ def score_rule(config, spl, technique_id, indexing_wait=20):
     # TARGET CORPUS — last 20 minutes (covers the atomic test we just ran)
     target_results = splunk_search(
         config, spl,
-        earliest=f"-{indexing_wait + 60}s",
+        earliest="-15m",
         latest="now",
         label="target"
     )
@@ -555,7 +555,7 @@ def main():
         help="Directory to write reports to (default: reports/)"
     )
     parser.add_argument(
-        "--indexing-wait", type=int, default=20,
+        "--indexing-wait", type=int, default=120,
         help="Seconds to wait for Splunk indexing after atomic test (default: 20)"
     )
     parser.add_argument(
